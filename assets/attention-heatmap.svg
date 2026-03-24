@@ -1,0 +1,98 @@
+<svg width="100%" viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      text { font-family: system-ui, sans-serif; }
+      .lbl  { font-size: 12px; fill: #2C2C2A; }
+      .sub  { font-size: 11px; fill: #888780; }
+      .wt   { font-size: 11px; font-family: ui-monospace, monospace; }
+      .ann  { font-size: 11px; fill: #0C447C; }
+      .head { font-size: 12px; font-weight: 500; fill: #3d3d3a; }
+    </style>
+  </defs>
+
+  <!-- Title -->
+  <text class="head" x="340" y="22" text-anchor="middle">attention weights for: "the corpus was wrong"</text>
+  <text class="sub" x="340" y="38" text-anchor="middle">each row shows how much that token attends to every earlier token (causal — future tokens are masked)</text>
+
+  <!-- Column headers (attended-to) -->
+  <text class="lbl" x="176" y="68" text-anchor="middle">the</text>
+  <text class="lbl" x="236" y="68" text-anchor="middle">corpus</text>
+  <text class="lbl" x="296" y="68" text-anchor="middle">was</text>
+  <text class="lbl" x="356" y="68" text-anchor="middle">wrong</text>
+  <text class="sub" x="248" y="82" text-anchor="middle">attended-to token →</text>
+
+  <!-- Row label axis -->
+  <text class="sub" x="100" y="160" text-anchor="middle" transform="rotate(-90, 100, 160)">attending token ↓</text>
+
+  <!-- Row 1: "the" attends only to itself -->
+  <text class="lbl" x="140" y="114" text-anchor="end">the</text>
+  <!-- cell: the→the = 1.0 -->
+  <rect x="152" y="92" width="48" height="40" rx="3" fill="#0C447C" opacity="1.0"/>
+  <text class="wt" x="176" y="116" text-anchor="middle" fill="#E6F1FB">1.00</text>
+  <!-- masked cells -->
+  <rect x="212" y="92" width="48" height="40" rx="3" fill="#F1EFE8"/>
+  <text class="sub" x="236" y="116" text-anchor="middle">—</text>
+  <rect x="272" y="92" width="48" height="40" rx="3" fill="#F1EFE8"/>
+  <text class="sub" x="296" y="116" text-anchor="middle">—</text>
+  <rect x="332" y="92" width="48" height="40" rx="3" fill="#F1EFE8"/>
+  <text class="sub" x="356" y="116" text-anchor="middle">—</text>
+
+  <!-- Row 2: "corpus" attends to the, corpus -->
+  <text class="lbl" x="140" y="162" text-anchor="end">corpus</text>
+  <!-- the→corpus = 0.39 -->
+  <rect x="152" y="140" width="48" height="40" rx="3" fill="#378ADD" opacity="0.39"/>
+  <text class="wt" x="176" y="164" text-anchor="middle" fill="#042C53">0.39</text>
+  <!-- corpus→corpus = 0.61 -->
+  <rect x="212" y="140" width="48" height="40" rx="3" fill="#378ADD" opacity="0.61"/>
+  <text class="wt" x="236" y="164" text-anchor="middle" fill="#042C53">0.61</text>
+  <!-- masked -->
+  <rect x="272" y="140" width="48" height="40" rx="3" fill="#F1EFE8"/>
+  <text class="sub" x="296" y="164" text-anchor="middle">—</text>
+  <rect x="332" y="140" width="48" height="40" rx="3" fill="#F1EFE8"/>
+  <text class="sub" x="356" y="164" text-anchor="middle">—</text>
+
+  <!-- Row 3: "was" attends to the, corpus, was -->
+  <text class="lbl" x="140" y="210" text-anchor="end">was</text>
+  <!-- the→was = 0.22 -->
+  <rect x="152" y="188" width="48" height="40" rx="3" fill="#378ADD" opacity="0.22"/>
+  <text class="wt" x="176" y="212" text-anchor="middle" fill="#042C53">0.22</text>
+  <!-- corpus→was = 0.51 -->
+  <rect x="212" y="188" width="48" height="40" rx="3" fill="#378ADD" opacity="0.51"/>
+  <text class="wt" x="236" y="212" text-anchor="middle" fill="#042C53">0.51</text>
+  <!-- was→was = 0.27 -->
+  <rect x="272" y="188" width="48" height="40" rx="3" fill="#378ADD" opacity="0.27"/>
+  <text class="wt" x="296" y="212" text-anchor="middle" fill="#042C53">0.27</text>
+  <!-- masked -->
+  <rect x="332" y="188" width="48" height="40" rx="3" fill="#F1EFE8"/>
+  <text class="sub" x="356" y="212" text-anchor="middle">—</text>
+
+  <!-- Row 4: "wrong" — the key row -->
+  <text class="lbl" x="140" y="258" text-anchor="end">wrong</text>
+  <!-- the→wrong = 0.020 -->
+  <rect x="152" y="236" width="48" height="40" rx="3" fill="#378ADD" opacity="0.04"/>
+  <text class="wt" x="176" y="260" text-anchor="middle" fill="#042C53">0.02</text>
+  <!-- corpus→wrong = 0.937 — HIGHLIGHTED -->
+  <rect x="212" y="236" width="48" height="40" rx="3" fill="#0C447C"/>
+  <text class="wt" x="236" y="257" text-anchor="middle" fill="#E6F1FB" style="font-weight:500">0.937</text>
+  <!-- was→wrong = 0.030 -->
+  <rect x="272" y="236" width="48" height="40" rx="3" fill="#378ADD" opacity="0.06"/>
+  <text class="wt" x="296" y="260" text-anchor="middle" fill="#042C53">0.03</text>
+  <!-- wrong→wrong = 0.013 -->
+  <rect x="332" y="236" width="48" height="40" rx="3" fill="#378ADD" opacity="0.03"/>
+  <text class="wt" x="356" y="260" text-anchor="middle" fill="#042C53">0.01</text>
+
+  <!-- Callout for the 0.937 cell -->
+  <line x1="260" y1="256" x2="420" y2="256" stroke="#185FA5" stroke-width="0.8" stroke-dasharray="4 3"/>
+  <text class="ann" x="424" y="248">"wrong" attends to</text>
+  <text class="ann" x="424" y="262">"corpus" at 93.7%</text>
+
+  <!-- Legend -->
+  <text class="sub" x="152" y="296">lighter</text>
+  <rect x="196" y="286" width="24" height="12" rx="2" fill="#378ADD" opacity="0.1"/>
+  <rect x="224" y="286" width="24" height="12" rx="2" fill="#378ADD" opacity="0.3"/>
+  <rect x="252" y="286" width="24" height="12" rx="2" fill="#378ADD" opacity="0.6"/>
+  <rect x="280" y="286" width="24" height="12" rx="2" fill="#0C447C" opacity="1.0"/>
+  <text class="sub" x="310" y="296">darker = stronger attention</text>
+  <rect x="430" y="286" width="24" height="12" rx="2" fill="#F1EFE8" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text class="sub" x="460" y="296">— = masked (future token)</text>
+</svg>

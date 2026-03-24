@@ -1,0 +1,73 @@
+<svg width="100%" viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: ui-monospace, monospace; }
+      .label { font-family: system-ui, sans-serif; font-size: 12px; fill: #5F5E5A; }
+      .big { font-size: 14px; font-weight: 500; fill: #2C2C2A; }
+      .num { font-size: 13px; fill: #2C2C2A; }
+      .dim { font-size: 12px; fill: #888780; }
+      .score { font-size: 18px; font-weight: 500; fill: #0C447C; }
+      .ann { font-size: 12px; fill: #0F6E56; }
+    </style>
+  </defs>
+
+  <!-- Query vector label -->
+  <text class="label" x="40" y="70">Query vector</text>
+  <text class="dim" x="40" y="86">(what am I looking for?)</text>
+
+  <!-- Query vector box -->
+  <rect x="40" y="96" width="220" height="40" rx="6" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+  <text class="num" x="80" y="121" text-anchor="middle">0.8</text>
+  <text class="num" x="150" y="121" text-anchor="middle">0.2</text>
+  <text class="num" x="220" y="121" text-anchor="middle">0.6</text>
+  <line x1="107" y1="100" x2="107" y2="132" stroke="#378ADD" stroke-width="0.5" opacity="0.4"/>
+  <line x1="178" y1="100" x2="178" y2="132" stroke="#378ADD" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Key vector label -->
+  <text class="label" x="40" y="160">Key vector</text>
+  <text class="dim" x="40" y="176">(what does this token contain?)</text>
+
+  <!-- Key vector box -->
+  <rect x="40" y="186" width="220" height="40" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text class="num" x="80" y="211" text-anchor="middle">0.7</text>
+  <text class="num" x="150" y="211" text-anchor="middle">0.9</text>
+  <text class="num" x="220" y="211" text-anchor="middle">0.1</text>
+  <line x1="107" y1="190" x2="107" y2="222" stroke="#1D9E75" stroke-width="0.5" opacity="0.4"/>
+  <line x1="178" y1="190" x2="178" y2="222" stroke="#1D9E75" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Multiply columns -->
+  <text class="dim" x="80" y="250" text-anchor="middle">0.8 × 0.7</text>
+  <text class="dim" x="150" y="250" text-anchor="middle">0.2 × 0.9</text>
+  <text class="dim" x="220" y="250" text-anchor="middle">0.6 × 0.1</text>
+  <text class="num" x="80" y="268" text-anchor="middle">= 0.56</text>
+  <text class="num" x="150" y="268" text-anchor="middle">= 0.18</text>
+  <text class="num" x="220" y="268" text-anchor="middle">= 0.06</text>
+
+  <!-- Vertical lines from boxes to products -->
+  <line x1="80" y1="136" x2="80" y2="237" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 3"/>
+  <line x1="150" y1="136" x2="150" y2="237" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 3"/>
+  <line x1="220" y1="136" x2="220" y2="237" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 3"/>
+  <line x1="80" y1="180" x2="80" y2="237" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 3"/>
+  <line x1="150" y1="180" x2="150" y2="237" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 3"/>
+  <line x1="220" y1="180" x2="220" y2="237" stroke="#888780" stroke-width="0.5" stroke-dasharray="3 3"/>
+
+  <!-- Sum arrow -->
+  <text class="label" x="290" y="258" text-anchor="middle">sum all</text>
+  <line x1="268" y1="262" x2="360" y2="262" stroke="#5F5E5A" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Score box -->
+  <rect x="368" y="240" width="90" height="44" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+  <text class="score" x="413" y="267" text-anchor="middle">0.80</text>
+
+  <!-- Score label -->
+  <text class="label" x="480" y="250">attention score</text>
+  <text class="ann" x="480" y="266">high = these vectors are</text>
+  <text class="ann" x="480" y="281">pointing the same way</text>
+
+  <!-- Divider and note -->
+  <line x1="40" y1="292" x2="640" y2="292" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text class="dim" x="40" y="307">The score gets divided by sqrt(d_k) (here, sqrt(8) ≈ 2.83) to keep gradients stable — that is the "scaled" in scaled dot-product attention.</text>
+</svg>

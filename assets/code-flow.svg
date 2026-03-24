@@ -1,0 +1,60 @@
+<svg width="100%" viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      text { font-family: system-ui, sans-serif; }
+      .fn   { font-size: 13px; font-weight: 500; fill: #2C2C2A; font-family: ui-monospace, monospace; }
+      .sub  { font-size: 11px; fill: #5F5E5A; }
+      .code { font-size: 11px; fill: #3d3d3a; font-family: ui-monospace, monospace; }
+      .in   { font-size: 11px; fill: #888780; }
+    </style>
+  </defs>
+
+  <!-- softmax() -->
+  <g>
+    <rect x="40" y="40" width="170" height="72" rx="8" fill="#FBEAF0" stroke="#D4537E" stroke-width="0.5"/>
+    <text class="fn" x="125" y="62" text-anchor="middle">softmax(x)</text>
+    <text class="sub" x="125" y="78" text-anchor="middle">numerically stable</text>
+    <text class="code" x="125" y="94" text-anchor="middle">e^(x − max(x)) / sum</text>
+    <text class="in" x="125" y="124" text-anchor="middle">takes: any array of scores</text>
+    <text class="in" x="125" y="138" text-anchor="middle">returns: weights summing to 1</text>
+  </g>
+
+  <!-- causal_mask() -->
+  <g>
+    <rect x="255" y="40" width="170" height="72" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+    <text class="fn" x="340" y="62" text-anchor="middle">causal_mask(n)</text>
+    <text class="sub" x="340" y="78" text-anchor="middle">upper triangle = −1e9</text>
+    <text class="code" x="340" y="94" text-anchor="middle">np.triu(…, k=1)</text>
+    <text class="in" x="340" y="124" text-anchor="middle">takes: sequence length n</text>
+    <text class="in" x="340" y="138" text-anchor="middle">returns: n × n mask matrix</text>
+  </g>
+
+  <!-- scaled_dot_product_attention() -->
+  <g>
+    <rect x="470" y="40" width="170" height="72" rx="8" fill="#E6F1FB" stroke="#378ADD" stroke-width="0.5"/>
+    <text class="fn" x="555" y="58" text-anchor="middle">scaled_dot_product</text>
+    <text class="fn" x="555" y="74" text-anchor="middle">_attention(Q,K,V)</text>
+    <text class="sub" x="555" y="90" text-anchor="middle">the full formula</text>
+    <text class="in" x="555" y="124" text-anchor="middle">calls softmax() and</text>
+    <text class="in" x="555" y="138" text-anchor="middle">optionally adds mask</text>
+  </g>
+
+  <!-- Arrows: softmax and causal_mask feed into attention -->
+  <line x1="210" y1="76" x2="468" y2="76" stroke="#D4537E" stroke-width="0.8" marker-end="url(#arrow)"/>
+  <line x1="425" y1="76" x2="468" y2="76" stroke="#1D9E75" stroke-width="0.8" marker-end="url(#arrow)"/>
+
+  <!-- Output section -->
+  <rect x="40" y="180" width="600" height="60" rx="8" fill="#F1EFE8" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text class="sub" x="340" y="200" text-anchor="middle">the function returns two things:</text>
+  <text class="code" x="240" y="218" text-anchor="middle">output matrix (n × d_k)</text>
+  <text class="sub" x="340" y="218" text-anchor="middle">and</text>
+  <text class="code" x="450" y="218" text-anchor="middle">attention weights (n × n)</text>
+  <text class="in" x="340" y="234" text-anchor="middle">returning the weights lets you inspect what the model attended to — that is how we see the 93.7%</text>
+
+  <!-- Arrow from attention down to output -->
+  <line x1="555" y1="114" x2="555" y2="178" stroke="#378ADD" stroke-width="0.8" marker-end="url(#arrow)"/>
+  <line x1="555" y1="178" x2="350" y2="178" stroke="#378ADD" stroke-width="0.8" marker-end="url(#arrow)"/>
+</svg>

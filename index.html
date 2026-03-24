@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>microAttention: By Reita Williams</title>
+<meta name="description" content="Scaled dot-product attention implemented from scratch in pure Python and NumPy. A learning artefact by AI governance practitioner Reita Williams.">
+<meta name="author" content="Reita Williams">
+<link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./base.css">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="site-wrapper">
+
+  <header class="site-header">
+    <a class="header-brand" href="#">
+      <svg class="header-logo" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="microAttention logo">
+        <rect width="32" height="32" rx="8" fill="currentColor" opacity="0.1"/>
+        <path d="M6 22V10h3v7.5c0 1.1.4 1.7 1.2 1.7.8 0 1.5-.6 2-1.8V10h3v12h-2.5l-.3-1.5c-.7 1.2-1.7 1.8-3 1.8-1 0-1.8-.3-2.4-1-.6-.7-.9-1.7-.9-3z" fill="var(--color-primary)"/>
+        <path d="M17 22l4-12h2l4 12h-2.5l-.8-2.5h-3.4l-.8 2.5H17zm4-4.5h2.2l-1.1-3.5-1.1 3.5z" fill="var(--color-primary)" opacity="0.7"/>
+        <circle cx="26" cy="9" r="2" fill="var(--color-primary)"/>
+      </svg>
+      <div>
+        <div class="header-title">microAttention</div>
+        <div class="header-subtitle">scaled dot-product attention from first principles</div>
+      </div>
+    </a>
+    <nav class="header-nav">
+      <a href="https://medium.com/@ReitaW/attention-as-the-core-of-cultural-machines-7278b58e0ea4" target="_blank" rel="noopener noreferrer">The Essay</a>
+      <a href="https://github.com/ReitaDev/microAttention" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="#introduction">Intro</a>
+      <a href="#formula">Formula</a>
+      <a href="#remarks">Remarks</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle theme">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="main-layout">
+
+      <aside class="sidebar">
+        <div class="sidebar-title">Table of Contents</div>
+        <ul class="toc-list" role="list">
+          <li><a href="#introduction" class="toc-link active">1. introduction</a></li>
+          <li><a href="#formula" class="toc-link">2. the formula</a></li>
+          <li><a href="#qkv" class="toc-link">3. q, k, v</a></li>
+          <li><a href="#scores" class="toc-link">4. attention scores</a></li>
+          <li><a href="#softmax" class="toc-link">5. softmax</a></li>
+          <li><a href="#aggregation" class="toc-link">6. value aggregation</a></li>
+          <li><a href="#masking" class="toc-link">7. causal mask</a></li>
+          <li><a href="#remarks" class="toc-link">8. what this taught me</a></li>
+        </ul>
+        <div class="sidebar-metrics">
+          <div>
+            <div class="metric-label">implementation</div>
+            <div class="metric-value" id="sidebar-ops">23 lines</div>
+          </div>
+          <div>
+            <div class="metric-label">complexity</div>
+            <div class="metric-value" id="sidebar-complexity">O(n&sup2;d)</div>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main-content">
+
+        <div class="page-hero">
+          <h1>microAttention</h1>
+          <p class="tagline">scaled dot-product attention &mdash; built from scratch by <a href="https://reita.dev" target="_blank" rel="noopener noreferrer">Reita Williams</a></p>
+          <a href="#introduction" class="why-link">why I built this</a>
+        </div>
+
+        <div class="pipeline-section">
+
+          <div class="pipeline-steps" role="tablist" aria-label="Attention implementation stages">
+            <button class="step-btn active" data-stage="0" role="tab" aria-selected="true"><span class="step-num">0</span>Python Source</button>
+            <button class="step-btn" data-stage="1" role="tab" aria-selected="false"><span class="step-num">1</span>Q / K / V</button>
+            <button class="step-btn" data-stage="2" role="tab" aria-selected="false"><span class="step-num">2</span>Dot Products</button>
+            <button class="step-btn" data-stage="3" role="tab" aria-selected="false"><span class="step-num">3</span>Softmax</button>
+            <button class="step-btn" data-stage="4" role="tab" aria-selected="false"><span class="step-num">4</span>Value Output</button>
+            <button class="step-btn" data-stage="5" role="tab" aria-selected="false"><span class="step-num">5</span>Causal Mask</button>
+            <button class="step-btn" data-stage="6" role="tab" aria-selected="false"><span class="step-num">6</span>The Result</button>
+          </div>
+
+          <div class="playback-bar">
+            <button class="play-btn" id="playBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+              Play
+            </button>
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+            <div class="stage-label" id="stageLabel">Stage 0 / 6</div>
+          </div>
+
+          <div class="view-tabs">
+            <button class="tab-btn active" data-tab="ir">Code</button>
+            <button class="tab-btn" data-tab="graphs">Explained</button>
+          </div>
+
+          <div class="stage-viewer">
+
+            <!-- STAGE 0 -->
+            <div class="stage-view active" id="stage-0">
+              <div class="stage-info">
+                <div class="stage-name">The complete implementation</div>
+                <p class="stage-description">The entire scaled dot-product attention mechanism in 23 lines of pure Python and NumPy only. Every line is written to be understood.</p>
+                <div class="ops-list">
+                  <span class="op-chip" style="background:oklch(0.9 0.04 150);border-color:oklch(0.7 0.1 150);color:oklch(0.2 0.1 150)"><span class="dot" style="background:#065f46"></span>softmax()</span>
+                  <span class="op-chip" style="background:oklch(0.9 0.04 200);border-color:oklch(0.7 0.1 200);color:oklch(0.2 0.1 200)"><span class="dot" style="background:#0369a1"></span>causal_mask()</span>
+                  <span class="op-chip" style="background:oklch(0.9 0.04 40);border-color:oklch(0.7 0.1 40);color:oklch(0.2 0.1 40)"><span class="dot" style="background:#b45309"></span>scaled_dot_product_attention()</span>
+                </div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-card">
+                  <div class="metric-card-label">Dependencies</div>
+                  <div class="metric-card-value">numpy, math</div>
+                  <div class="metric-bar-track"><div class="metric-bar-fill" style="width:15%;background:var(--color-primary)"></div></div>
+                </div>
+                <div class="metric-card">
+                  <div class="metric-card-label">Total lines</div>
+                  <div class="metric-card-value">23</div>
+                  <div class="metric-bar-track"><div class="metric-bar-fill" style="width:23%;background:var(--color-emerald)"></div></div>
+                </div>
+              </div>
+              <div class="split-panel">
+                <div class="code-panel">
+                  <div class="code-panel-header">
+                    <div class="traffic-lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div>
+                    <div class="code-panel-title">MICROATTENTION.PY</div>
+                    <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                  </div>
+                  <div class="code-block">
+                    <pre id="code-0"><div class="code-line"><span class="line-num">1</span><span class="line-content"><span class="kw">import</span> numpy <span class="kw">as</span> np</span></div>
+<div class="code-line"><span class="line-num">2</span><span class="line-content"><span class="kw">import</span> math</span></div>
+<div class="code-line"><span class="line-num">3</span><span class="line-content"></span></div>
+<div class="code-line op-marked" data-op="1"><span class="line-num">4</span><span class="line-content"><span class="kw">def</span> <span class="fn">softmax</span>(x):</span></div>
+<div class="code-line op-marked" data-op="1"><span class="line-num">5</span><span class="line-content">    e_x <span class="op">=</span> np.<span class="fn">exp</span>(x <span class="op">-</span> np.<span class="fn">max</span>(x, axis<span class="op">=-</span><span class="num">1</span>, keepdims<span class="op">=</span><span class="kw">True</span>))</span></div>
+<div class="code-line op-marked" data-op="1"><span class="line-num">6</span><span class="line-content">    <span class="kw">return</span> e_x <span class="op">/</span> e_x.<span class="fn">sum</span>(axis<span class="op">=-</span><span class="num">1</span>, keepdims<span class="op">=</span><span class="kw">True</span>)</span></div>
+<div class="code-line"><span class="line-num">7</span><span class="line-content"></span></div>
+<div class="code-line op-marked" data-op="2"><span class="line-num">8</span><span class="line-content"><span class="kw">def</span> <span class="fn">causal_mask</span>(n):</span></div>
+<div class="code-line op-marked" data-op="2"><span class="line-num">9</span><span class="line-content">    <span class="kw">return</span> np.<span class="fn">triu</span>(np.<span class="fn">full</span>((n, n), <span class="op">-</span><span class="num">1e9</span>), k<span class="op">=</span><span class="num">1</span>)</span></div>
+<div class="code-line"><span class="line-num">10</span><span class="line-content"></span></div>
+<div class="code-line op-marked" data-op="3"><span class="line-num">11</span><span class="line-content"><span class="kw">def</span> <span class="fn">scaled_dot_product_attention</span>(Q, K, V, mask<span class="op">=</span><span class="kw">None</span>):</span></div>
+<div class="code-line op-marked" data-op="3"><span class="line-num">12</span><span class="line-content">    scores <span class="op">=</span> Q <span class="op">@</span> K.T <span class="op">/</span> math.<span class="fn">sqrt</span>(Q.shape[<span class="op">-</span><span class="num">1</span>])</span></div>
+<div class="code-line op-marked" data-op="3"><span class="line-num">13</span><span class="line-content">    <span class="kw">if</span> mask <span class="kw">is not</span> <span class="kw">None</span>: scores <span class="op">=</span> scores <span class="op">+</span> mask</span></div>
+<div class="code-line op-marked" data-op="3"><span class="line-num">14</span><span class="line-content">    weights <span class="op">=</span> <span class="fn">softmax</span>(scores)</span></div>
+<div class="code-line op-marked" data-op="3"><span class="line-num">15</span><span class="line-content">    <span class="kw">return</span> weights <span class="op">@</span> V, weights</span></div>
+<div class="code-line"><span class="line-num">16</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">17</span><span class="line-content">sentence <span class="op">=</span> [<span class="str">"the"</span>, <span class="str">"corpus"</span>, <span class="str">"was"</span>, <span class="str">"wrong"</span>]</span></div>
+<div class="code-line"><span class="line-num">18</span><span class="line-content">np.random.<span class="fn">seed</span>(<span class="num">42</span>)</span></div>
+<div class="code-line"><span class="line-num">19</span><span class="line-content">token_embeddings <span class="op">=</span> np.random.<span class="fn">randn</span>(<span class="num">4</span>, <span class="num">8</span>)</span></div>
+<div class="code-line"><span class="line-num">20</span><span class="line-content">Q <span class="op">=</span> token_embeddings <span class="op">@</span> np.random.<span class="fn">randn</span>(<span class="num">8</span>, <span class="num">8</span>)</span></div>
+<div class="code-line"><span class="line-num">21</span><span class="line-content">K <span class="op">=</span> token_embeddings <span class="op">@</span> np.random.<span class="fn">randn</span>(<span class="num">8</span>, <span class="num">8</span>)</span></div>
+<div class="code-line"><span class="line-num">22</span><span class="line-content">V <span class="op">=</span> token_embeddings <span class="op">@</span> np.random.<span class="fn">randn</span>(<span class="num">8</span>, <span class="num">8</span>)</span></div>
+<div class="code-line"><span class="line-num">23</span><span class="line-content">output, weights <span class="op">=</span> <span class="fn">scaled_dot_product_attention</span>(Q, K, V, <span class="fn">causal_mask</span>(<span class="num">4</span>))</span></div></pre>
+                  </div>
+                </div>
+                <div class="ops-panel">
+                  <div class="ops-panel-title">Functions</div>
+                  <div class="ops-panel-list">
+                    <div class="op-item highlighted" data-op="1"><div class="op-badge" style="background:#065f46">1</div>softmax</div>
+                    <div class="op-item" data-op="2"><div class="op-badge" style="background:#0369a1">2</div>causal_mask</div>
+                    <div class="op-item" data-op="3"><div class="op-badge" style="background:#b45309">3</div>attention</div>
+                  </div>
+                </div>
+              </div>
+              <div class="graph-panel hidden" id="graph-0">
+                <div class="attention-viz-title">Three functions. That is the whole thing.</div>
+                <div class="flow-diagram">
+                  <div class="flow-node"><div class="flow-box" style="border-color:var(--color-border);color:var(--color-text)">token_embeddings, shape (4 &times; 8)</div></div>
+                  <div style="display:flex;gap:var(--space-8);align-items:flex-start;padding:var(--space-4) 0">
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3)">
+                      <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:#7c3aed">&times; W_Q (random 8&times;8)</div>
+                      <div class="flow-box" style="border-color:#7c3aed;color:#7c3aed;background:oklch(0.93 0.04 280)">Q</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3)">
+                      <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:#0369a1">&times; W_K (random 8&times;8)</div>
+                      <div class="flow-box" style="border-color:#0369a1;color:#0369a1;background:oklch(0.93 0.04 220)">K</div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:var(--space-3)">
+                      <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:#065f46">&times; W_V (random 8&times;8)</div>
+                      <div class="flow-box" style="border-color:#065f46;color:#065f46;background:oklch(0.93 0.04 155)">V</div>
+                    </div>
+                  </div>
+                  <div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-muted);text-align:center">weight matrices are random here. In a real transformer, they are learned from the corpus.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- STAGE 1 -->
+            <div class="stage-view" id="stage-1">
+              <div class="stage-info">
+                <div class="stage-name">Q / K / V: three projections, three purposes</div>
+                <p class="stage-description">Each token gets projected into three different vector spaces. Q asks: what am I looking for? K advertises: this is what I contain. V contributes: this is what I actually pass forward. The separation is elegant: the model learns searching and being-found as distinct operations.</p>
+                <div class="ops-list">
+                  <span class="op-chip" style="background:oklch(0.9 0.04 280);border-color:oklch(0.7 0.1 280);color:oklch(0.2 0.1 280)"><span class="dot" style="background:#7c3aed"></span>Q = embeddings @ W_Q</span>
+                  <span class="op-chip" style="background:oklch(0.9 0.04 200);border-color:oklch(0.7 0.1 200);color:oklch(0.2 0.1 200)"><span class="dot" style="background:#0369a1"></span>K = embeddings @ W_K</span>
+                  <span class="op-chip" style="background:oklch(0.9 0.04 150);border-color:oklch(0.7 0.1 150);color:oklch(0.2 0.1 150)"><span class="dot" style="background:#065f46"></span>V = embeddings @ W_V</span>
+                </div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-card"><div class="metric-card-label">Each matrix shape</div><div class="metric-card-value">(4 &times; 8)</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:40%;background:#7c3aed"></div></div></div>
+                <div class="metric-card"><div class="metric-card-label">d_k dimension</div><div class="metric-card-value">8</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:8%;background:#0369a1"></div></div></div>
+              </div>
+              <div class="split-panel">
+                <div class="code-panel">
+                  <div class="code-panel-header"><div class="traffic-lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div><div class="code-panel-title">Q / K / V PROJECTIONS</div><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <div class="code-block"><pre><div class="code-line"><span class="line-num">1</span><span class="line-content"><span class="cmt"># each word is an 8-dimensional vector</span></span></div>
+<div class="code-line"><span class="line-num">2</span><span class="line-content"><span class="cmt"># multiply by weight matrix to project into Q, K, V spaces</span></span></div>
+<div class="code-line"><span class="line-num">3</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">4</span><span class="line-content">Q <span class="op">=</span> token_embeddings <span class="op">@</span> W_Q  <span class="cmt"># what am I looking for?</span></span></div>
+<div class="code-line"><span class="line-num">5</span><span class="line-content">K <span class="op">=</span> token_embeddings <span class="op">@</span> W_K  <span class="cmt"># what do I contain?</span></span></div>
+<div class="code-line"><span class="line-num">6</span><span class="line-content">V <span class="op">=</span> token_embeddings <span class="op">@</span> W_V  <span class="cmt"># what do I contribute?</span></span></div>
+<div class="code-line"><span class="line-num">7</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">8</span><span class="line-content"><span class="cmt"># Q[3] is "wrong" asking its question</span></span></div>
+<div class="code-line"><span class="line-num">9</span><span class="line-content"><span class="cmt"># K[1] is "corpus" presenting its key</span></span></div>
+<div class="code-line"><span class="line-num">10</span><span class="line-content"><span class="cmt"># the dot product between them will be high</span></span></div></pre></div>
+                </div>
+                <div class="ops-panel">
+                  <div class="ops-panel-title">Three roles</div>
+                  <div class="ops-panel-list">
+                    <div class="op-item highlighted"><div class="op-badge" style="background:#7c3aed">Q</div>Query: looking for</div>
+                    <div class="op-item"><div class="op-badge" style="background:#0369a1">K</div>Key: advertises</div>
+                    <div class="op-item"><div class="op-badge" style="background:#065f46">V</div>Value: contributes</div>
+                  </div>
+                </div>
+              </div>
+              <div class="graph-panel hidden" id="graph-1">
+                <div class="qkv-diagram" style="max-width:600px">
+                  <div class="qkv-box" style="border-color:#7c3aed;background:oklch(0.95 0.03 280)"><div class="label" style="color:#7c3aed">Q</div><div class="desc">What am I looking for?<br>"wrong" asks the question</div></div>
+                  <div class="qkv-box" style="border-color:#0369a1;background:oklch(0.95 0.03 220)"><div class="label" style="color:#0369a1">K</div><div class="desc">What do I contain?<br>"corpus" presents its key</div></div>
+                  <div class="qkv-box" style="border-color:#065f46;background:oklch(0.95 0.03 155)"><div class="label" style="color:#065f46">V</div><div class="desc">What do I contribute?<br>the information passed forward</div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- STAGE 2 -->
+            <div class="stage-view" id="stage-2">
+              <div class="stage-info">
+                <div class="stage-name">Dot products: similarity as a number</div>
+                <p class="stage-description">The dot product between a query vector and a key vector is a single number measuring how similar they are. Multiply element-by-element, then sum. High score means pointing in the same direction means relevant. Q @ K.T computes all n&sup2; scores simultaneously in one matrix multiplication.</p>
+                <div class="ops-list">
+                  <span class="op-chip" style="background:oklch(0.9 0.04 40);border-color:oklch(0.7 0.1 40);color:oklch(0.2 0.1 40)"><span class="dot" style="background:var(--color-primary)"></span>scores = Q @ K.T / &radic;d_k</span>
+                </div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-card"><div class="metric-card-label">Score matrix shape</div><div class="metric-card-value">(4 &times; 4)</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:40%;background:var(--color-primary)"></div></div></div>
+                <div class="metric-card"><div class="metric-card-label">Scale factor &radic;d_k</div><div class="metric-card-value">&radic;8 &asymp; 2.83</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:35%;background:var(--color-rose)"></div></div></div>
+              </div>
+              <div class="split-panel">
+                <div class="code-panel">
+                  <div class="code-panel-header"><div class="traffic-lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div><div class="code-panel-title">SCORE COMPUTATION</div><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <div class="code-block"><pre><div class="code-line"><span class="line-num">1</span><span class="line-content"><span class="cmt"># Q is (4,8), K.T is (8,4) &rarr; scores is (4,4)</span></span></div>
+<div class="code-line"><span class="line-num">2</span><span class="line-content"><span class="cmt"># scores[i,j] = dot(Q[i], K[j]) / &radic;8</span></span></div>
+<div class="code-line"><span class="line-num">3</span><span class="line-content">scores <span class="op">=</span> Q <span class="op">@</span> K.T <span class="op">/</span> math.<span class="fn">sqrt</span>(Q.shape[<span class="op">-</span><span class="num">1</span>])</span></div>
+<div class="code-line"><span class="line-num">4</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">5</span><span class="line-content"><span class="cmt"># Q.shape[-1] reads d_k from the actual input</span></span></div>
+<div class="code-line"><span class="line-num">6</span><span class="line-content"><span class="cmt"># not hardcoded, works for any dimension</span></span></div>
+<div class="code-line"><span class="line-num">7</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">8</span><span class="line-content"><span class="cmt"># why divide by &radic;d_k?</span></span></div>
+<div class="code-line"><span class="line-num">9</span><span class="line-content"><span class="cmt"># dot products grow with d_k, pushing softmax into saturation</span></span></div>
+<div class="code-line"><span class="line-num">10</span><span class="line-content"><span class="cmt"># and reducing gradients to near zero</span></span></div>
+<div class="code-line"><span class="line-num">11</ span>< span class="line-content" >< span class="cmt" ># scaling keeps variance at 1 regardless of size</ span ></ span ></ div ></ pre ></ div >
+                </div>
+                <div class="ops-panel">
+                  <div class="ops-panel-title">Result</div>
+                  <div class="ops-panel-list"><div class="op-item highlighted"><div class="op-badge" style="background:var(--color-primary)">S</div>4&times;4 score matrix</div></div>
+                  <div style="margin-top:var(--space-4);padding:var(--space-3);background:var(--color-surface-offset);border-radius:var(--radius-md)"><div style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-text-muted)">scores[3,1] for "wrong" to "corpus" will be highest in row 3</div></div>
+                </div>
+              </div>
+              <div class="graph-panel hidden" id="graph-2">
+                <div class="attention-viz-title">Score matrix: 4 tokens, every pair</div>
+                <div id="score-matrix-container"></div>
+                <p style="font-size:var(--text-xs);color:var(--color-text-muted);font-family:var(--font-mono);margin-top:var(--space-3)">Row = attending token. Column = attended-to token. Upper triangle will be masked.</p>
+              </div>
+            </div>
+
+            <!-- STAGE 3 -->
+            <div class="stage-view" id="stage-3">
+              <div class="stage-info">
+                <div class="stage-name">Softmax: turning scores into weights</div>
+                <p class="stage-description">Softmax converts each row of raw scores into a probability distribution: all positive, summing to 1.0. The exponential function amplifies differences, so a moderate lead in raw scores becomes a large lead after softmax. The mechanism produced that concentration.</p>
+                <div class="ops-list">
+                  <span class="op-chip" style="background:oklch(0.9 0.04 40);border-color:oklch(0.7 0.1 40);color:oklch(0.2 0.1 40)"><span class="dot" style="background:var(--color-primary)"></span>e^(x &minus; max(x)) / sum</span>
+                  <span class="op-chip" style="background:oklch(0.9 0.04 340);border-color:oklch(0.7 0.1 340);color:oklch(0.2 0.1 340)"><span class="dot" style="background:var(--color-rose)"></span>weights sum to 1.0</span>
+                </div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-card"><div class="metric-card-label">Stability trick</div><div class="metric-card-value">x &minus; max(x)</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:75%;background:var(--color-primary)"></div></div></div>
+                <div class="metric-card"><div class="metric-card-label">"wrong" &rarr; "corpus"</div><div class="metric-card-value">93.7%</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:93.7%;background:var(--color-emerald)"></div></div></div>
+              </div>
+              <div class="split-panel">
+                <div class="code-panel">
+                  <div class="code-panel-header"><div class="traffic-lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div><div class="code-panel-title">NUMERICALLY STABLE SOFTMAX</div><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <div class="code-block"><pre><div class="code-line"><span class="line-num">1</span><span class="line-content"><span class="kw">def</span> <span class="fn">softmax</span>(x):</span></div>
+<div class="code-line"><span class="line-num">2</span><span class="line-content">    <span class="cmt"># subtract max before exponential</span></span></div>
+<div class="code-line"><span class="line-num">3</span><span class="line-content">    <span class="cmt"># prevents overflow; max cancels in division</span></span></div>
+<div class="code-line"><span class="line-num">4</span><span class="line-content">    e_x <span class="op">=</span> np.<span class="fn">exp</span>(x <span class="op">-</span> np.<span class="fn">max</span>(x, axis<span class="op">=-</span><span class="num">1</span>, keepdims<span class="op">=</span><span class="kw">True</span>))</span></div>
+<div class="code-line"><span class="line-num">5</span><span class="line-content">    <span class="kw">return</span> e_x <span class="op">/</span> e_x.<span class="fn">sum</span>(axis<span class="op">=-</span><span class="num">1</span>, keepdims<span class="op">=</span><span class="kw">True</span>)</span></div>
+<div class="code-line"><span class="line-num">6</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">7</span><span class="line-content">    <span class="cmt"># axis=-1: each ROW gets its own softmax</span></span></div>
+<div class="code-line"><span class="line-num">8</span><span class="line-content">    <span class="cmt"># each attending token has weights summing to 1</span></span></div>
+<div class="code-line"><span class="line-num">9</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">10</span><span class="line-content">    <span class="cmt"># for "wrong" (row 3), after softmax:</span></span></div>
+<div class="code-line"><span class="line-num">11</span><span class="line-content">    <span class="cmt"># the    &rarr; 0.020</span></span></div>
+<div class="code-line"><span class="line-num">12</span><span class="line-content">    <span class="cmt"># corpus &rarr; 0.937  &larr; 93.7%</span></span></div>
+<div class="code-line"><span class="line-num">13</span><span class="line-content">    <span class="cmt"># was    &rarr; 0.030</span></span></div>
+<div class="code-line"><span class="line-num">14</span><span class="line-content">    <span class="cmt"># wrong  &rarr; 0.013</span></span></div></pre></div>
+                </div>
+                <div class="ops-panel">
+                  <div class="ops-panel-title">Effect</div>
+                  <div class="ops-panel-list">
+                    <div class="op-item highlighted"><div class="op-badge" style="background:var(--color-primary)">e^x</div>Exponential amplifies</div>
+                    <div class="op-item"><div class="op-badge" style="background:var(--color-rose)">&divide;</div>Divide normalises</div>
+                  </div>
+                </div>
+              </div>
+              <div class="graph-panel hidden" id="graph-3"><div id="softmax-viz"></div></div>
+            </div>
+
+            <!-- STAGE 4 -->
+            <div class="stage-view" id="stage-4">
+              <div class="stage-info">
+                <div class="stage-name">Value aggregation: the weighted blend</div>
+                <p class="stage-description">With attention weights in hand, multiply by V. Each token's output is a weighted blend across all value vectors, with each token contributing proportionally. For "wrong", 93.7% of the weight goes toward corpus's value vector. Output shape matches input shape.</p>
+                <div class="ops-list">
+                  <span class="op-chip" style="background:oklch(0.9 0.04 150);border-color:oklch(0.7 0.1 150);color:oklch(0.2 0.1 150)"><span class="dot" style="background:var(--color-emerald)"></span>output = weights @ V</span>
+                </div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-card"><div class="metric-card-label">Output shape</div><div class="metric-card-value">(4 &times; 8)</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:90%;background:var(--color-emerald)"></div></div></div>
+                <div class="metric-card"><div class="metric-card-label">Returns</div><div class="metric-card-value" id="speedup-val">output + weights</div><div class="metric-bar-track"><div class="metric-bar-fill" id="speedup-bar" style="width:90%;background:var(--color-primary)"></div></div></div>
+              </div>
+              <div class="split-panel">
+                <div class="code-panel">
+                  <div class="code-panel-header"><div class="traffic-lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div><div class="code-panel-title">VALUE AGGREGATION</div><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <div class="code-block"><pre><div class="code-line"><span class="line-num">1</span><span class="line-content">    weights <span class="op">=</span> <span class="fn">softmax</span>(scores)</span></div>
+<div class="code-line"><span class="line-num">2</span><span class="line-content">    <span class="kw">return</span> weights <span class="op">@</span> V, weights</span></div>
+<div class="code-line"><span class="line-num">3</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">4</span><span class="line-content">    <span class="cmt"># weights @ V is (4,4) @ (4,8) &rarr; (4,8)</span></span></div>
+<div class="code-line"><span class="line-num">5</span><span class="line-content">    <span class="cmt"># same shape as token_embeddings</span></span></div>
+<div class="code-line"><span class="line-num">6</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">7</span><span class="line-content">    <span class="cmt"># returning weights is a transparency choice</span></span></div>
+<div class="code-line"><span class="line-num">8</span><span class="line-content">    <span class="cmt"># it lets you inspect what happened</span></span></div>
+<div class="code-line"><span class="line-num">9</span><span class="line-content">    <span class="cmt"># that is how we see the 93.7%</span></span></div>
+<div class="code-line"><span class="line-num">10</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">11</span><span class="line-content">    <span class="cmt"># "wrong" output =</span></span></div>
+<div class="code-line"><span class="line-num">12</span><span class="line-content">    <span class="cmt"># 2.0%&times;V[the] + 93.7%&times;V[corpus]</span></span></div>
+<div class="code-line"><span class="line-num">13</span><span class="line-content">    <span class="cmt"># + 3.0%&times;V[was] + 1.3%&times;V[wrong]</span></span></div></pre></div>
+                </div>
+                <div class="ops-panel">
+                  <div class="ops-panel-title">Output</div>
+                  <div class="ops-panel-list">
+                    <div class="op-item highlighted"><div class="op-badge" style="background:var(--color-emerald)">O</div>Context vectors (4&times;8)</div>
+                    <div class="op-item"><div class="op-badge" style="background:var(--color-primary)">W</div>Weights (4&times;4)</div>
+                  </div>
+                </div>
+              </div>
+              <div class="graph-panel hidden" id="graph-4"><div class="attention-viz-title">Value aggregation for "wrong"</div><div id="value-agg-viz"></div></div>
+            </div>
+
+            <!-- STAGE 5 -->
+            <div class="stage-view" id="stage-5">
+              <div class="stage-info">
+                <div class="stage-name">Causal mask: enforcing the past</div>
+                <p class="stage-description">Each token can only see what came before it. The mask enforces this by adding &minus;1,000,000,000 to all future positions before softmax. After the exponential, those positions become effectively zero. The upper triangle of the score matrix becomes zero, leaving a strictly lower-triangular attention pattern.</p>
+                <div class="ops-list">
+                  <span class="op-chip" style="background:oklch(0.9 0.04 340);border-color:oklch(0.7 0.1 340);color:oklch(0.2 0.1 340)"><span class="dot" style="background:var(--color-rose)"></span>np.triu(full(-1e9), k=1)</span>
+                  <span class="op-chip" style="background:oklch(0.9 0.04 40);border-color:oklch(0.7 0.1 40);color:oklch(0.2 0.1 40)"><span class="dot" style="background:var(--color-primary)"></span>scores + mask &rarr; softmax</span>
+                </div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-card"><div class="metric-card-label">Masked positions</div><div class="metric-card-value">6 of 16 cells</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:37.5%;background:var(--color-rose)"></div></div></div>
+                <div class="metric-card"><div class="metric-card-label">After softmax</div><div class="metric-card-value">upper-tri = 0</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:62.5%;background:var(--color-primary)"></div></div></div>
+              </div>
+              <div class="split-panel">
+                <div class="code-panel">
+                  <div class="code-panel-header"><div class="traffic-lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div><div class="code-panel-title">CAUSAL MASK</div><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <div class="code-block"><pre><div class="code-line"><span class="line-num">1</span><span class="line-content"><span class="kw">def</span> <span class="fn">causal_mask</span>(n):</span></div>
+<div class="code-line"><span class="line-num">2</span><span class="line-content">    <span class="kw">return</span> np.<span class="fn">triu</span>(np.<span class="fn">full</span>((n, n), <span class="op">-</span><span class="num">1e9</span>), k<span class="op">=</span><span class="num">1</span>)</span></div>
+<div class="code-line"><span class="line-num">3</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">4</span><span class="line-content">    <span class="cmt"># np.triu returns upper triangle, k=1 starts</span></span></div>
+<div class="code-line"><span class="line-num">5</span><span class="line-content">    <span class="cmt"># one above the diagonal, so tokens can see themselves</span></span></div>
+<div class="code-line"><span class="line-num">6</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">7</span><span class="line-content">    <span class="cmt"># for n=4 produces:</span></span></div>
+<div class="code-line"><span class="line-num">8</span><span class="line-content">    <span class="cmt"># [  0   -1e9  -1e9  -1e9 ]</span></span></div>
+<div class="code-line"><span class="line-num">9</span><span class="line-content">    <span class="cmt"># [  0    0   -1e9  -1e9 ]</span></span></div>
+<div class="code-line"><span class="line-num">10</span><span class="line-content">    <span class="cmt"># [  0    0    0   -1e9 ]</span></span></div>
+<div class="code-line"><span class="line-num">11</span><span class="line-content">    <span class="cmt"># [  0    0    0    0  ]</span></span></div>
+<div class="code-line"><span class="line-num">12</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">13</span><span class="line-content">    <span class="cmt"># e^(-1e9) &asymp; 0, so future tokens vanish</span></span></div></pre></div>
+                </div>
+                <div class="ops-panel">
+                  <div class="ops-panel-title">Mask</div>
+                  <div class="ops-panel-list">
+                    <div class="op-item highlighted"><div class="op-badge" style="background:var(--color-rose)">&#9660;</div>tril structure</div>
+                    <div class="op-item"><div class="op-badge" style="background:var(--color-primary)">+</div>Added to scores</div>
+                  </div>
+                </div>
+              </div>
+              <div class="graph-panel hidden" id="graph-5"><div id="mask-viz"></div></div>
+            </div>
+
+            <!-- STAGE 6 -->
+            <div class="stage-view" id="stage-6">
+              <div class="stage-info">
+                <div class="stage-name">"wrong" attended to "corpus" at 93.7%</div>
+                <p class="stage-description">The sentence was chosen deliberately because I had written an essay arguing the corpus was wrong. The model had random weight matrices and a mathematical operation for measuring the angle between vectors. It found the relationship anyway. That is matrix multiplication doing exactly what it is supposed to do. Which is, when you think about it, precisely the point.</p>
+                <div class="ops-list">
+                  <span class="op-chip" style="background:oklch(0.9 0.04 150);border-color:oklch(0.7 0.1 150);color:oklch(0.2 0.1 150)"><span class="dot" style="background:#065f46"></span>weights[3,1] = 0.937</span>
+                  <span class="op-chip" style="background:oklch(0.9 0.04 40);border-color:oklch(0.7 0.1 40);color:oklch(0.2 0.1 40)"><span class="dot" style="background:#b45309"></span>seed 42 &middot; d_k = 8</span>
+                </div>
+              </div>
+              <div class="metrics-row">
+                <div class="metric-card"><div class="metric-card-label">"wrong" &rarr; "corpus"</div><div class="metric-card-value">93.7%</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:93.7%;background:var(--color-emerald)"></div></div></div>
+                <div class="metric-card"><div class="metric-card-label">"wrong" &rarr; everything else</div><div class="metric-card-value">6.3%</div><div class="metric-bar-track"><div class="metric-bar-fill" style="width:6.3%;background:var(--color-rose)"></div></div></div>
+              </div>
+              <div class="split-panel">
+                <div class="code-panel">
+                  <div class="code-panel-header"><div class="traffic-lights"><span style="background:#ff5f57"></span><span style="background:#febc2e"></span><span style="background:#28c840"></span></div><div class="code-panel-title">THE OUTPUT</div><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                  <div class="code-block"><pre><div class="code-line"><span class="line-num">1</span><span class="line-content">sentence <span class="op">=</span> [<span class="str">"the"</span>, <span class="str">"corpus"</span>, <span class="str">"was"</span>, <span class="str">"wrong"</span>]</span></div>
+<div class="code-line"><span class="line-num">2</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">3</span><span class="line-content"><span class="cmt"># attention weights per token (row):</span></span></div>
+<div class="code-line"><span class="line-num">4</span><span class="line-content"><span class="cmt"># "the"    &rarr;  the=1.000</span></span></div>
+<div class="code-line"><span class="line-num">5</span><span class="line-content"><span class="cmt"># "corpus" &rarr;  the=0.390, corpus=0.610</span></span></div>
+<div class="code-line"><span class="line-num">6</span><span class="line-content"><span class="cmt"># "was"    &rarr;  the=0.220, corpus=0.510, was=0.270</span></span></div>
+<div class="code-line"><span class="line-num">7</span><span class="line-content"><span class="cmt"># "wrong"  &rarr;  the=0.020, corpus=0.937, was=0.030, wrong=0.013</span></span></div>
+<div class="code-line"><span class="line-num">8</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">9</span><span class="line-content"><span class="cmt"># the model did not know about the essay</span></span></div>
+<div class="code-line"><span class="line-num">10</span><span class="line-content"><span class="cmt"># it just did the matrix multiplication</span></span></div>
+<div class="code-line"><span class="line-num">11</span><span class="line-content"></span></div>
+<div class="code-line"><span class="line-num">12</span><span class="line-content"><span class="cmt"># understanding that does not make the result</span></span></div>
+<div class="code-line"><span class="line-num">13</span><span class="line-content"><span class="cmt"># less interesting. it changes what kind of</span></span></div>
+<div class="code-line"><span class="line-num">14</span><span class="line-content"><span class="cmt"># interesting it is.</span></span></div></pre></div>
+                </div>
+                <div class="ops-panel">
+                  <div class="ops-panel-title">weights[3,:]</div>
+                  <div class="ops-panel-list">
+                    <div class="op-item"><div class="op-badge" style="background:#aaa">&rarr;</div>the: 2.0%</div>
+                    <div class="op-item highlighted"><div class="op-badge" style="background:var(--color-emerald)">&rarr;</div>corpus: 93.7%</div>
+                    <div class="op-item"><div class="op-badge" style="background:#aaa">&rarr;</div>was: 3.0%</div>
+                    <div class="op-item"><div class="op-badge" style="background:#aaa">&rarr;</div>wrong: 1.3%</div>
+                  </div>
+                </div>
+              </div>
+              <div class="graph-panel hidden" id="graph-6"><div id="multihead-viz"></div></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- WRITTEN CONTENT -->
+        <div class="content-section reveal" id="introduction">
+          <span class="section-anchor" id="sec-intro"></span>
+          <h2 class="section-heading">1. introduction</h2>
+          <div class="section-body">
+            <p>There is a period when you are reading about transformer architecture where you are technically following along: you can repeat the words back, you can locate the formula, you can say "the query attends to the key and returns a weighted sum of the values" in a way that sounds right, yet you are not understanding it at all. You are carrying the sentence around like an object you cannot open.</p>
+            <p>The moment it opened for me was not when I read a better explanation. It was when I implemented it. Specifically when I ran my own sentence through the finished code and looked at the output. The sentence was "the corpus was wrong", chosen deliberately because I had written <a href="https://medium.com/@ReitaW/attention-as-the-core-of-cultural-machines-7278b58e0ea4" target="_blank" rel="noopener noreferrer">an essay arguing exactly that</a>. When I ran those four words through the implementation I had just built, "wrong" attended to "corpus" at 93.7%. The model had no access to the essay. It just did the matrix multiplication.</p>
+            <div class="callout">
+              <p><strong>What this is:</strong> scaled dot-product attention implemented in pure Python and NumPy: pure computation, every line written to be understood. The interactive pipeline above walks through each stage. The written sections below explain what each part is doing and why it is there.</p>
+            </div>
+            <p>This is a learning artefact built by an AI governance practitioner who needed to go inside the mechanism rather than continuing to write about it from the outside. The implementation is 23 lines. The understanding it required is the point.</p>
+          </div>
+        </div>
+
+        <div class="content-section reveal" id="formula">
+          <span class="section-anchor" id="sec-formula"></span>
+          <h2 class="section-heading">2. the formula</h2>
+          <div class="section-body">
+            <p>Short enough to fit on one line. You see it cited in papers without surrounding explanation as if it is self-evident. It becomes clear once you have spent time with each part.</p>
+            <div class="formula-block">Attention(Q, K, V) = softmax( QK<sup>T</sup> / &radic;d<sub>k</sub> ) &middot; V</div>
+            <p><strong>QK<sup>T</sup></strong> is the dot product between every query and every key at once. A (4&times;8) matrix times an (8&times;4) matrix gives a (4&times;4) score matrix where each cell is a similarity score between one query and one key.</p>
+            <p><strong>&divide; &radic;d<sub>k</sub></strong> is the scaling factor. Dot products grow with dimension size, pushing softmax into saturation and causing gradients to vanish. Dividing by &radic;d_k keeps variance at 1 regardless of d_k. The purpose becomes clear once you see what it prevents.</p>
+            <p><strong>softmax(&middot;)</strong> converts each row of scores into a probability distribution: all positive, all between zero and one, all summing to exactly one. The exponential function amplifies differences, which is why a moderate lead in raw scores becomes a 93.7% result.</p>
+            <p><strong>&middot; V</strong> is the final weighted sum. Each output token is a smooth, differentiable blend of all value vectors, proportioned by the attention weights.</p>
+          </div>
+        </div>
+
+        <div class="content-section reveal" id="qkv">
+          <span class="section-anchor" id="sec-qkv"></span>
+          <h2 class="section-heading">3. q, k, v projections</h2>
+          <div class="section-body">
+            <p>Each token gets projected into three different vector spaces via three different learned weight matrices. In this implementation those matrices are random. In a real transformer they are the product of gradient descent across a training corpus, adjusted to minimise prediction error across billions of examples.</p>
+            <p><strong>Q (Query):</strong> what is this token looking for? When "wrong" produces its output, it uses Q[3] to search the sequence for relevant information.</p>
+            <p><strong>K (Key):</strong> what does this token contain? "corpus" advertises itself via K[1]. A high dot product between Q[3] and K[1] means "wrong" found what it was looking for in "corpus".</p>
+            <p><strong>V (Value):</strong> what does this token contribute? It passes specific information forward, blended proportionally by the attention weights computed from Q and K.</p>
+            <div class="callout">
+              <p><strong>The governance implication:</strong> the weight matrices are the corpus made mathematical. What the model learns to attend to is determined by the patterns in training data: which query vectors end up similar to which key vectors is the geometry the corpus shapes. The geometry determines the dot products. The dot products become the attention weights. Understanding that chain is a precondition for precise governance work.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-section reveal" id="scores">
+          <span class="section-anchor" id="sec-scores"></span>
+          <h2 class="section-heading">4. attention scores</h2>
+          <div class="section-body">
+            <p>The dot product between two vectors is a single number measuring how much they point in the same direction. Multiply element by element, then sum. When the vectors are similar, meaning the words are related in the model's estimation, the score is high. When they are orthogonal, the score approaches zero.</p>
+            <p>This is the attention score between those two tokens. It is not a judgement, it is not comprehension, it is the cosine of an angle between two lists of numbers, and it functions as relevance. That is what the model uses to decide what to attend to.</p>
+            <p>Q @ K.T computes all n&sup2; scores simultaneously. For four tokens that is 16 scores. For a sequence of 2048 tokens it is over 4 million scores per head per layer. This quadratic scaling is the primary bottleneck motivating FlashAttention and related work, though the mathematical operation is the same at any scale.</p>
+          </div>
+        </div>
+
+        <div class="content-section reveal" id="softmax">
+          <span class="section-anchor" id="sec-softmax"></span>
+          <h2 class="section-heading">5. softmax</h2>
+          <div class="section-body">
+            <p>Once you have the raw attention scores, you need to convert them into weights that sum to one. That is what softmax does. The formula: for each score x_i, compute e^(x_i) divided by the sum of e^(x_j) for all j. The exponential function means small differences in raw scores become large differences in output weights.</p>
+            <p>Subtracting the maximum before exponentiating (<code>x - max(x)</code>) prevents overflow. It is a numerical stability fix: the largest value becomes zero before exponentiation, keeping the computation stable. The mathematical result is identical either way.</p>
+            <p>The sharpening effect of softmax is why "wrong" attending to "corpus" at 93.7% looks so decisive. The raw dot product score was already the highest in row 3. The exponential amplified that lead into near-total concentration. The mathematics produced the result from a score that was highest by a moderate margin.</p>
+          </div>
+        </div>
+
+        <div class="content-section reveal" id="aggregation">
+          <span class="section-anchor" id="sec-agg"></span>
+          <h2 class="section-heading">6. value aggregation</h2>
+          <div class="section-body">
+            <p>With attention weights in hand, the final step is a matrix multiply: weights @ V. Each output token is a weighted average of all value vectors, where the weights come from the softmax output.</p>
+            <p>For "wrong", the output vector is: 2.0% of V[the] + 93.7% of V[corpus] + 3.0% of V[was] + 1.3% of V[wrong]. The model is not retrieving "corpus". It is constructing a new representation of "wrong" that has been shaped by what it attended to across the whole sentence.</p>
+            <p>The function returns both the output and the attention weights. Returning the weights is a transparency decision: it makes the mechanism inspectable. You can see exactly what the model attended to and by how much. That distinction between having the output and being able to see the mechanism is one I think about in governance contexts regularly.</p>
+          </div>
+        </div>
+
+        <div class="content-section reveal" id="masking">
+          <span class="section-anchor" id="sec-mask"></span>
+          <h2 class="section-heading">7. causal mask</h2>
+          <div class="section-body">
+            <p>The attention formula as written computes scores between every pair of tokens in both directions. For a model generating text one token at a time, each position should attend only to prior tokens.</p>
+            <p>The causal mask enforces this by setting position (i, j) to &minus;1,000,000,000 whenever j is greater than i. After softmax, e^(&minus;1e9) is effectively zero, so those positions contribute nothing. The upper triangle becomes zero, leaving a strictly lower-triangular attention pattern.</p>
+            <p>The mask is added to the scores before softmax rather than applied separately, which means the whole sequence of score, scale, mask, and softmax collapses to one expression: softmax(Q @ K.T / &radic;d_k + mask). That is the formula from the paper, implemented directly.</p>
+          </div>
+        </div>
+
+        <div class="content-section reveal" id="remarks">
+          <span class="section-anchor" id="sec-remarks"></span>
+          <h2 class="section-heading">8. what this taught me</h2>
+          <div class="section-body">
+            <p>Building an attention mechanism from scratch changed the texture of the understanding I already had. It moved things from being known to being felt, which is a different and more durable thing.</p>
+            <p>The gap between what these systems appear to do and what they are actually doing is where most of the harm in AI governance lives. You can write about that gap from the outside. But there is a difference between knowing it exists and having a clear enough picture of the mechanism that you can hold both sides of the gap in your head at the same time and see precisely where they diverge. When I watched "wrong" attend to "corpus" at 93.7% and felt the pull of saying the model had found something, and then immediately traced that feeling back to matrix multiplication and a random seed, I was experiencing both sides of the gap in the same moment.</p>
+            <p>I can now write about this with more precision about where exactly the appearance and the mechanism come apart. The result is a better-formed set of questions.</p>
+            <div class="callout">
+              <p><strong>Read the essay this came from:</strong> <a href="https://medium.com/@ReitaW/attention-as-the-core-of-cultural-machines-7278b58e0ea4" target="_blank" rel="noopener noreferrer">Attention as the Core of Cultural Machines</a>: the argument that the corpus shapes what the model learns to attend to, and why that matters for governance.</p>
+            </div>
+            <p>This is a one week compressed-time project. The implementation took several sessions. The documentation took several more. The understanding it required is ongoing. That is fine. The point was always to go inside the thing and stand within it, able to say something true about what you are looking at.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-left">microAttention, built by <a href="https://reita.dev" target="_blank" rel="noopener noreferrer">Reita Williams</a></div>
+    <div class="footer-links">
+      <a href="https://medium.com/@ReitaW/attention-as-the-core-of-cultural-machines-7278b58e0ea4" target="_blank" rel="noopener noreferrer">The Essay</a>
+      <a href="https://medium.com/@ReitaW" target="_blank" rel="noopener noreferrer">Medium</a>
+      <a href="https://www.linkedin.com/in/reita-williams" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      <a href="https://github.com/ReitaDev/microAttention" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="https://micromlc.com" target="_blank" rel="noopener noreferrer">inspired by microMLC</a>
+    </div>
+  </footer>
+
+</div>
+<script src="./app.js"></script>
+</body>
+</html>

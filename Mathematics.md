@@ -1,0 +1,27 @@
+The mathematics
+The formula for scaled dot-product attention is short. Short enough to fit on one line, short enough that you see it cited in papers without any surrounding explanation as if it is self-evident, which it is not, but which it does become once you have spent time with it. Here it is.
+
+What that is saying, read left to right, is: take your queries and your keys, compute the dot product between every query and every key, divide those scores by the square root of the key dimension to keep them numerically stable, pass the results through softmax to turn them into a proper probability distribution, and then use those weights to construct a weighted average of the values. The output has the same shape as the input  you put in n tokens, you get out n tokens but each output token has been reshaped by what it attended to.
+The rest of this page is just that sentence, unpacked.
+
+What Q Kᵀ is computing
+Q is a matrix where each row is the query vector for one token. Kᵀ is the transpose of K, so each column is the key vector for one token. When you multiply them together, each cell in the result is the dot product between one query and one key, and that dot product is a scalar that encodes how similar those two vectors are in the space the model has learned.
+For four tokens, Q is a 4 × 8 matrix and Kᵀ is an 8 × 4 matrix, and their product is a 4 × 4 matrix where position (i, j) holds the raw attention score of token i attending to token j. That is every token attending to every other token simultaneously, which is the thing about transformers that makes them different from architectures that process sequence one step at a time.
+
+Why you divide by the square root of d_k
+When the dimension of the key vectors gets large, the dot products tend to get large too, because you are summing across more terms. Specifically, if the components of Q and K are each drawn from a distribution with mean zero and variance one, the dot product QKᵀ has variance d_k, and its standard deviation grows with the square root of d_k. Dividing by √d_k brings the variance back to one regardless of how large d_k is.
+Why does that matter? Because softmax is sensitive to the scale of its inputs in a way that bites you in training. When the input values are large, the softmax function saturates — it pushes nearly all weight onto the highest-scoring token and gives near-zero weight to everything else, which produces very small gradients, which makes learning slow down or stall. The scaling is not about the forward pass working correctly, it is about the backward pass being able to update the weights.
+In this implementation d_k is 8, so the scaling factor is roughly 2.83. That is a modest correction. In a production transformer with d_k of 64 or 512 or more, the correction is much larger and correspondingly more important.
+
+What softmax is doing to the scores
+Softmax takes a list of numbers and converts them into a probability distribution — all positive, all between zero and one, all summing to exactly one. The formula is: for each score x_i in the list, compute e^(x_i) divided by the sum of e^(x_j) for all j. The exponential function is what gives softmax its character, because e^x grows very fast, which means small differences in input scores become large differences in output weights.
+The effect is sharpening. A list of scores like [1.2, 3.8, 0.4, 0.9] does not become [0.25, 0.25, 0.25, 0.25] after softmax, and it does not become [0.19, 0.60, 0.06, 0.14] either, which is what you would get from simple normalisation. It becomes something much more concentrated, because the exponential magnifies the advantage of the highest score.
+Show Image
+This is why "wrong" attending to "corpus" at 93.7% is not surprising once you understand the mechanism. The raw dot product score between those two vectors was already the highest in that row, and softmax amplified that lead into something that looks almost like a binary decision. The model did not decide that corpus was uniquely relevant. The mathematics of the exponential function, applied to scores that happened to be distributed a certain way because of how those random vectors landed, produced that concentration.
+Understanding that does not make the result less interesting but it does change what kind of interesting it is.
+
+The causal mask
+The attention formula as written computes scores between every pair of tokens in both directions, which is what you want for tasks like understanding a full sentence before producing an output. But for a model that generates text one token at a time, you need a different constraint: each token can only attend to what has already been generated, not to future tokens it has not seen yet.
+The causal mask enforces that by setting the score at position (i, j) to negative one billion whenever j is greater than i, which is to say whenever token j comes after token i in the sequence. Negative one billion is far enough into negative territory that e^(−1,000,000,000) is effectively zero, so after softmax those positions contribute nothing to the output. The upper triangle of the scores matrix disappears. What you are left with is a strictly lower-triangular attention pattern, which is what the heatmap for "the corpus was wrong" shows.
+
+→ [Back to what attention is](what-is-attention.md) · [Next: the implementation](implementation.md)
